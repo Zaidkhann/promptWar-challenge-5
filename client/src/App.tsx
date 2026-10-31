@@ -149,6 +149,22 @@ const MainApp: React.FC = () => {
         )}
       </main>
 
+      {/* Accessible Semantic Footer Landmark */}
+      <footer
+        className="app-footer"
+        role="contentinfo"
+        style={{
+          marginTop: 'auto',
+          padding: '24px 16px',
+          textAlign: 'center',
+          color: 'var(--slate-500)',
+          fontSize: '0.8125rem',
+          borderTop: '1px solid var(--slate-200)',
+        }}
+      >
+        <p>CelebraPlan AI &copy; 2026 &bull; PromptWars Challenge 5 &bull; Powered by Google Gemini 2.5 Flash</p>
+      </footer>
+
       {/* Accessible Dialog Modals */}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
