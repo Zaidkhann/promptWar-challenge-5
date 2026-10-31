@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: celebraplan-ai
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: DATABASE_PATH
+        value: ./data/celebraplan.sqlite

@@ -4,6 +4,9 @@
   "private": true,
   "description": "CelebraPlan AI - GenAI-powered Celebration & Event Planning Platform",
   "scripts": {
+    "postinstall": "cd server && npm install && cd ../client && npm install",
+    "build": "cd client && npm run build && cd ../server && npm run build",
+    "start": "cd server && node dist/server.js",
     "server:dev": "cd server && npm run dev",
     "server:build": "cd server && npm run build",
     "server:test": "cd server && npm test",

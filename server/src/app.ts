@@ -1,6 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import fs from 'fs';
 import { env } from './config/env';
 import { initDatabase } from './db';
 import { seedDatabase } from './db/seed';
@@ -41,10 +43,19 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Mount all API endpoints
 app.use('/api', apiRouter);
 
-// Handle unknown API routes
-app.use('/api/*', (req: Request, res: Response, next: NextFunction) => {
+// Handle unknown API routes (must be before frontend SPA fallback)
+app.all('/api/*', (req: Request, res: Response, next: NextFunction) => {
   next(new AppError(`API endpoint not found: ${req.method} ${req.originalUrl}`, 404));
 });
+
+// Serve frontend static build if available (Unified full-stack deployment)
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req: Request, res: Response) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
 
 // Centralized error handling
 app.use(errorHandler);
