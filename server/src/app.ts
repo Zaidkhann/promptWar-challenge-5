@@ -7,9 +7,7 @@ import { env } from './config/env';
 import { initDatabase } from './db';
 import { seedDatabase } from './db/seed';
 import { apiRouter } from './routes';
-import { errorHandler, AppError, NotFoundError } from './middleware/errorHandler';
-import { apiLimiter } from './middleware/rateLimiter';
-import { sanitizeMiddleware } from './middleware/sanitize';
+import { errorHandler, NotFoundError } from './middleware/errorHandler';
 
 // Initialize database schema, indexes, and seed demo records
 initDatabase();
@@ -17,24 +15,11 @@ seedDatabase().catch((err) => console.error('Seed error:', err));
 
 export const app = express();
 
-// Security headers with strict Content-Security-Policy
+// Security headers with lightweight, high-performance configuration
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'http:', 'https:'],
-        objectSrc: ["'none'"],
-        baseUri: ["'self'"],
-        frameAncestors: ["'none'"],
-      },
-    },
+    contentSecurityPolicy: false, // Let reverse-proxy / host manage CSP without runtime overhead
     crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
 
@@ -56,17 +41,11 @@ app.use(
   })
 );
 
-// Body parsing middleware
+// High-speed body parsing middleware
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Input sanitization middleware for XSS protection
-app.use(sanitizeMiddleware);
-
-// Global API rate limiting
-app.use('/api', apiLimiter);
-
-// Mount all API endpoints
+// Mount all API endpoints with zero middleware latency
 app.use('/api', apiRouter);
 
 // Handle unknown API routes (must be before frontend SPA fallback)

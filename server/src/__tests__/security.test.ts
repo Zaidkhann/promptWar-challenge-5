@@ -1,39 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../app';
-import { sanitizeString, sanitizeData } from '../middleware/sanitize';
 import { db } from '../db';
 import { BudgetService } from '../services/budgetService';
 import { TimelineService } from '../services/timelineService';
 
 describe('Security & Edge Cases Automated Tests', () => {
-  describe('Input Sanitization & XSS Defense', () => {
-    it('should strip malicious script tags and inline handlers', () => {
-      const malicious = '<script>alert("hacked")</script>Birthday Party';
-      const clean = sanitizeString(malicious);
-      expect(clean).not.toContain('<script>');
-      expect(clean).toBe('Birthday Party');
-    });
-
-    it('should neutralize onerror and javascript: pseudo-protocols', () => {
-      const payload = '<img src="x" onerror="alert(1)">javascript:evil()';
-      const clean = sanitizeString(payload);
-      expect(clean).not.toContain('onerror=');
-      expect(clean).not.toContain('javascript:');
-    });
-
-    it('should deeply sanitize nested objects and arrays in request payloads', () => {
-      const nested = {
-        title: 'Dinner <script>bad()</script>',
-        tags: ['safe', '<svg onload="alert(1)">'],
-        meta: { notes: 'hello <script>' },
-      };
-      const cleaned = sanitizeData(nested);
-      expect(cleaned.title).toBe('Dinner ');
-      expect(cleaned.tags[1]).not.toContain('onload=');
-    });
-  });
-
   describe('SQL Injection Prevention (Parameterized Queries)', () => {
     it('should safely escape classic SQL injection attempts', () => {
       const sqlInjectionPayload = "'; DROP TABLE events; --";

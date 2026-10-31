@@ -9,7 +9,7 @@ import {
   PartyPopper,
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { EventProvider, useEvent } from './context/EventContext';
+import { EventProvider } from './context/EventContext';
 import { Navbar } from './components/common/Navbar';
 import { AuthModal } from './components/common/AuthModal';
 import { EventFormModal } from './components/events/EventFormModal';
@@ -33,31 +33,24 @@ const tabsConfig: Array<{ id: TabType; label: string; icon: React.ReactNode }> =
 
 const MainApp: React.FC = () => {
   const { user } = useAuth();
-  const { activeEvent } = useEvent();
 
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
-  const [liveAnnouncement, setLiveAnnouncement] = useState('');
-
-  const switchTab = (tab: TabType) => {
-    setActiveTab(tab);
-    setLiveAnnouncement(`Navigated to ${tab} tab.`);
-  };
 
   const handleEventCreated = (_newEventId: string, triggerAiPlan: boolean) => {
     if (triggerAiPlan) {
-      switchTab('planner');
+      setActiveTab('planner');
     }
   };
 
   const handleKeyDownTab = (e: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
     if (e.key === 'ArrowRight') {
       const nextIndex = (currentIndex + 1) % tabsConfig.length;
-      switchTab(tabsConfig[nextIndex].id);
+      setActiveTab(tabsConfig[nextIndex].id);
     } else if (e.key === 'ArrowLeft') {
       const prevIndex = (currentIndex - 1 + tabsConfig.length) % tabsConfig.length;
-      switchTab(tabsConfig[prevIndex].id);
+      setActiveTab(tabsConfig[prevIndex].id);
     }
   };
 
@@ -67,11 +60,6 @@ const MainApp: React.FC = () => {
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-
-      {/* Screen Reader Live Region for Dynamic Updates */}
-      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-        {liveAnnouncement}
-      </div>
 
       {/* Navbar Header */}
       <Navbar
@@ -95,7 +83,7 @@ const MainApp: React.FC = () => {
                   aria-controls={`panel-${tab.id}`}
                   tabIndex={isSelected ? 0 : -1}
                   className={`nav-tab-btn ${isSelected ? 'active' : ''}`}
-                  onClick={() => switchTab(tab.id)}
+                  onClick={() => setActiveTab(tab.id)}
                   onKeyDown={(e) => handleKeyDownTab(e, index)}
                 >
                   {tab.icon}
@@ -133,73 +121,31 @@ const MainApp: React.FC = () => {
             </div>
           </div>
         ) : (
-          <>
-            <div
-              role="tabpanel"
-              id="panel-dashboard"
-              aria-labelledby="tab-dashboard"
-              hidden={activeTab !== 'dashboard'}
-              tabIndex={0}
-            >
-              {activeTab === 'dashboard' && (
-                <DashboardOverview
-                  onNavigateTab={(tab) => switchTab(tab)}
-                  onOpenCreateEvent={() => setIsCreateEventModalOpen(true)}
-                  onOpenExpenseModal={() => switchTab('budget')}
-                />
-              )}
-            </div>
+          <div
+            role="tabpanel"
+            id={`panel-${activeTab}`}
+            aria-labelledby={`tab-${activeTab}`}
+            tabIndex={0}
+            style={{ outline: 'none' }}
+          >
+            {activeTab === 'dashboard' && (
+              <DashboardOverview
+                onNavigateTab={(tab) => setActiveTab(tab)}
+                onOpenCreateEvent={() => setIsCreateEventModalOpen(true)}
+                onOpenExpenseModal={() => setActiveTab('budget')}
+              />
+            )}
 
-            <div
-              role="tabpanel"
-              id="panel-planner"
-              aria-labelledby="tab-planner"
-              hidden={activeTab !== 'planner'}
-              tabIndex={0}
-            >
-              {activeTab === 'planner' && <AiPlannerView />}
-            </div>
+            {activeTab === 'planner' && <AiPlannerView />}
 
-            <div
-              role="tabpanel"
-              id="panel-budget"
-              aria-labelledby="tab-budget"
-              hidden={activeTab !== 'budget'}
-              tabIndex={0}
-            >
-              {activeTab === 'budget' && <BudgetTracker />}
-            </div>
+            {activeTab === 'budget' && <BudgetTracker />}
 
-            <div
-              role="tabpanel"
-              id="panel-timeline"
-              aria-labelledby="tab-timeline"
-              hidden={activeTab !== 'timeline'}
-              tabIndex={0}
-            >
-              {activeTab === 'timeline' && <TimelineView />}
-            </div>
+            {activeTab === 'timeline' && <TimelineView />}
 
-            <div
-              role="tabpanel"
-              id="panel-vendors"
-              aria-labelledby="tab-vendors"
-              hidden={activeTab !== 'vendors'}
-              tabIndex={0}
-            >
-              {activeTab === 'vendors' && <VendorView />}
-            </div>
+            {activeTab === 'vendors' && <VendorView />}
 
-            <div
-              role="tabpanel"
-              id="panel-recommendations"
-              aria-labelledby="tab-recommendations"
-              hidden={activeTab !== 'recommendations'}
-              tabIndex={0}
-            >
-              {activeTab === 'recommendations' && <RecommendationsView />}
-            </div>
-          </>
+            {activeTab === 'recommendations' && <RecommendationsView />}
+          </div>
         )}
       </main>
 
