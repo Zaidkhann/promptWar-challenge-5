@@ -12,10 +12,12 @@ import {
   PartyPopper,
   MapPin,
   Users,
+  Download,
 } from 'lucide-react';
 import { DashboardSummary } from '../../types';
 import { dashboardService } from '../../services/dashboardService';
 import { useEvent } from '../../context/EventContext';
+import { triggerFileDownload } from '../../utils/formatters';
 
 interface DashboardOverviewProps {
   onNavigateTab: (tab: 'dashboard' | 'planner' | 'budget' | 'timeline' | 'vendors' | 'recommendations') => void;
@@ -81,6 +83,48 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   const isOverBudget = summary.remaining_budget < 0;
 
+  const handleExportDossier = () => {
+    const target = activeEvent || summary.next_event;
+    if (!target) return;
+
+    const guestCount = 'guest_count' in target ? target.guest_count : 'Standard RSVP';
+    const allocatedBudget = 'total_budget' in target ? `INR ${target.total_budget.toLocaleString()}` : 'Allocated in summary';
+
+    const content = `# CELEBRAPLAN AI - COMPREHENSIVE EVENT DOSSIER
+Generated: ${new Date().toLocaleString()}
+
+## 1. EVENT SPECIFICATIONS
+- Event Name: ${target.name}
+- Category: ${target.category}
+- Date: ${target.event_date}
+- Location: ${target.location}
+- Guest Count: ${guestCount}
+- Budget: ${allocatedBudget}
+
+## 2. REAL-TIME FINANCIAL SUMMARY
+- Total Overall Budget: INR ${(summary.total_budget || 0).toLocaleString()}
+- Total Spent To Date: INR ${(summary.total_spent || 0).toLocaleString()}
+- Remaining Balance: INR ${(summary.remaining_budget || 0).toLocaleString()}
+- Budget Health: ${summary.remaining_budget >= 0 ? 'HEALTHY ON-TRACK' : 'DEFICIT ALERT'}
+
+## 3. PREPARATION TIMELINE & READINESS
+- Total Tracked Tasks: ${summary.task_stats?.total_tasks || 0}
+- Completed Milestones: ${summary.task_stats?.completed_tasks || 0}
+- Overdue Milestones: ${summary.task_stats?.overdue_tasks || 0}
+- Overall Readiness: ${summary.task_stats?.completion_rate || 0}%
+
+## 4. EXECUTIVE SUMMARY & NEXT STEPS
+- Celebration Countdown: ${summary.next_event ? summary.next_event.days_until : 0} days remaining.
+- Action Required: Verify upcoming vendor quotes, monitor category buffers, and review AI recommendations.
+
+---
+Plan managed with CelebraPlan AI - Powered by Google Gemini 2.5 Flash
+`;
+
+    const filename = `${target.name.replace(/\s+/g, '_')}_Event_Dossier.md`;
+    triggerFileDownload(content, filename, 'text/markdown;charset=utf-8;');
+  };
+
   return (
     <div>
       {/* Next Upcoming Celebration Highlight Banner */}
@@ -137,15 +181,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div style={{ fontSize: '0.8125rem', fontWeight: 600, opacity: 0.9, textTransform: 'uppercase' }}>
                 Days Remaining
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                style={{ marginTop: '12px', background: '#ffffff', color: 'var(--primary-800)', border: 'none' }}
-                onClick={() => onNavigateTab('planner')}
-              >
-                <Sparkles size={14} color="var(--primary-600)" />
-                <span>Open AI Planner</span>
-              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ background: '#ffffff', color: 'var(--primary-800)', border: 'none' }}
+                  onClick={() => onNavigateTab('planner')}
+                >
+                  <Sparkles size={14} color="var(--primary-600)" />
+                  <span>Open AI Planner</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.4)',
+                  }}
+                  onClick={handleExportDossier}
+                  title="Export complete celebration planning dossier"
+                >
+                  <Download size={14} aria-hidden="true" />
+                  <span>Export Dossier</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

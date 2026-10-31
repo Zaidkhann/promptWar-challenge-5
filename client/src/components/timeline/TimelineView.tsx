@@ -12,6 +12,7 @@ import {
   Square,
   X,
   Layers,
+  Download,
 } from 'lucide-react';
 import {
   TimelineTask,
@@ -24,6 +25,7 @@ import {
 } from '../../types';
 import { timelineService } from '../../services/timelineService';
 import { useEvent } from '../../context/EventContext';
+import { generateCsv, triggerFileDownload } from '../../utils/formatters';
 
 export const TimelineView: React.FC = () => {
   const { activeEvent, refreshActiveEvent, refreshEvents } = useEvent();
@@ -45,6 +47,18 @@ export const TimelineView: React.FC = () => {
   const [daysBeforeEvent, setDaysBeforeEvent] = useState<number>(30);
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [formError, setFormError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsTaskModalOpen(false);
+      }
+    };
+    if (isTaskModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTaskModalOpen]);
 
   const loadTimelineData = async () => {
     if (!activeEvent) return;
@@ -154,6 +168,33 @@ export const TimelineView: React.FC = () => {
     }
   };
 
+  const handleExportTimelineCsv = () => {
+    if (!activeEvent || allTasks.length === 0) return;
+    const headers = [
+      'Task / Milestone',
+      'Category',
+      'Due Date',
+      'Days Before Event',
+      'Priority',
+      'Status',
+      'Is Overdue',
+      'Description',
+    ];
+    const rows = allTasks.map((t) => [
+      t.title,
+      t.category,
+      t.due_date,
+      t.days_before_event,
+      t.priority,
+      t.status,
+      t.is_overdue ? 'YES' : 'NO',
+      t.description || '',
+    ]);
+    const csvContent = generateCsv(headers, rows);
+    const filename = `${activeEvent.name.replace(/\s+/g, '_')}_Timeline_Schedule.csv`;
+    triggerFileDownload(csvContent, filename, 'text/csv;charset=utf-8;');
+  };
+
   const filteredTasks = allTasks.filter((t) => {
     if (filterStatus === 'all') return true;
     if (filterStatus === 'completed') return t.status === 'completed';
@@ -177,14 +218,27 @@ export const TimelineView: React.FC = () => {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => handleOpenTaskModal()}
-          >
-            <Plus size={16} />
-            <span>Add Custom Milestone</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleExportTimelineCsv}
+              disabled={allTasks.length === 0}
+              title="Download timeline and milestones as CSV schedule"
+            >
+              <Download size={15} aria-hidden="true" />
+              <span>Export Schedule</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => handleOpenTaskModal()}
+            >
+              <Plus size={16} />
+              <span>Add Custom Milestone</span>
+            </button>
+          </div>
         </div>
 
         {/* Progress Bar */}

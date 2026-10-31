@@ -11,6 +11,7 @@ import {
   DollarSign,
   PieChart,
   X,
+  Download,
 } from 'lucide-react';
 import {
   VENDOR_CATEGORIES,
@@ -22,6 +23,7 @@ import {
 } from '../../types';
 import { budgetService } from '../../services/budgetService';
 import { useEvent } from '../../context/EventContext';
+import { generateCsv, triggerFileDownload } from '../../utils/formatters';
 
 export const BudgetTracker: React.FC = () => {
   const { activeEvent, refreshActiveEvent, refreshEvents } = useEvent();
@@ -51,6 +53,19 @@ export const BudgetTracker: React.FC = () => {
   const [allocAmount, setAllocAmount] = useState<number>(0);
 
   const [formError, setFormError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsExpenseModalOpen(false);
+        setIsAllocModalOpen(false);
+      }
+    };
+    if (isExpenseModalOpen || isAllocModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExpenseModalOpen, isAllocModalOpen]);
 
   const loadBudgetData = async () => {
     if (!activeEvent) return;
@@ -172,6 +187,31 @@ export const BudgetTracker: React.FC = () => {
     } catch (err: any) {
       setFormError(err.message || 'Failed to save allocation');
     }
+  };
+
+  const handleExportBudgetCsv = () => {
+    if (!activeEvent || expenses.length === 0) return;
+    const headers = [
+      'Expense Title',
+      'Category',
+      'Amount (INR)',
+      'Expense Date',
+      'Payment Status',
+      'Paid To / Vendor',
+      'Notes',
+    ];
+    const rows = expenses.map((e) => [
+      e.title,
+      e.category,
+      e.amount,
+      e.expense_date,
+      e.status,
+      e.paid_to || '',
+      e.notes || '',
+    ]);
+    const csvContent = generateCsv(headers, rows);
+    const filename = `${activeEvent.name.replace(/\s+/g, '_')}_Budget_Expenses.csv`;
+    triggerFileDownload(csvContent, filename, 'text/csv;charset=utf-8;');
   };
 
   const isOverBudget = summary?.is_over_budget;
@@ -370,6 +410,17 @@ export const BudgetTracker: React.FC = () => {
                 </option>
               ))}
             </select>
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleExportBudgetCsv}
+              disabled={expenses.length === 0}
+              title="Download filtered expenses as CSV spreadsheet"
+            >
+              <Download size={15} aria-hidden="true" />
+              <span>Export CSV</span>
+            </button>
 
             <button
               type="button"

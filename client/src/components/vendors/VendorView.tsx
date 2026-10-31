@@ -12,6 +12,8 @@ import {
   Info,
   X,
   Building,
+  Download,
+  ArrowRight,
 } from 'lucide-react';
 import {
   Vendor,
@@ -23,6 +25,7 @@ import {
 } from '../../types';
 import { vendorService } from '../../services/vendorService';
 import { useEvent } from '../../context/EventContext';
+import { generateCsv, triggerFileDownload } from '../../utils/formatters';
 
 export const VendorView: React.FC = () => {
   const { activeEvent, refreshActiveEvent, refreshEvents } = useEvent();
@@ -47,6 +50,18 @@ export const VendorView: React.FC = () => {
   const [status, setStatus] = useState<VendorStatus>('inquiry');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsModalOpen(false);
+      }
+    };
+    if (isModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
 
   const loadVendors = async () => {
     if (!activeEvent) return;
@@ -155,6 +170,57 @@ export const VendorView: React.FC = () => {
     }
   };
 
+  const handleAdvanceStatus = async (vendor: Vendor) => {
+    if (!activeEvent) return;
+    const nextStatusMap: Record<string, VendorStatus> = {
+      inquiry: 'quoted',
+      quoted: 'contract_sent',
+      contract_sent: 'booked',
+      booked: 'completed',
+    };
+    const nextStatus = nextStatusMap[vendor.status];
+    if (!nextStatus) return;
+
+    try {
+      await vendorService.updateVendor(activeEvent.id, vendor.id, {
+        status: nextStatus,
+      });
+      await loadVendors();
+      await refreshActiveEvent();
+    } catch (err) {
+      console.error('Failed to advance vendor status:', err);
+    }
+  };
+
+  const handleExportVendorsCsv = () => {
+    if (!activeEvent || vendors.length === 0) return;
+    const headers = [
+      'Company Name',
+      'Category',
+      'Contact Person',
+      'Phone',
+      'Email',
+      'Status',
+      'Estimated Cost (INR)',
+      'Agreed Cost (INR)',
+      'Notes',
+    ];
+    const rows = vendors.map((v) => [
+      v.company_name,
+      v.category,
+      v.contact_person || '',
+      v.phone || '',
+      v.email || '',
+      v.status,
+      v.estimated_cost,
+      v.actual_cost,
+      v.notes || '',
+    ]);
+    const csvContent = generateCsv(headers, rows);
+    const filename = `${activeEvent.name.replace(/\s+/g, '_')}_Vendor_Directory.csv`;
+    triggerFileDownload(csvContent, filename, 'text/csv;charset=utf-8;');
+  };
+
   const filteredVendors = vendors.filter((v) => {
     if (!categoryFilter) return true;
     return v.category === categoryFilter;
@@ -247,6 +313,17 @@ export const VendorView: React.FC = () => {
 
             <button
               type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleExportVendorsCsv}
+              disabled={vendors.length === 0}
+              title="Download full vendor directory and quotes as CSV"
+            >
+              <Download size={15} aria-hidden="true" />
+              <span>Export Directory</span>
+            </button>
+
+            <button
+              type="button"
               className="btn btn-primary btn-sm"
               onClick={() => handleOpenModal()}
             >
@@ -335,7 +412,27 @@ export const VendorView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {vendor.status !== 'completed' && vendor.status !== 'cancelled' && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            color: 'var(--primary-700)',
+                            borderColor: 'var(--primary-200)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          onClick={() => handleAdvanceStatus(vendor)}
+                          title="Advance vendor to next pipeline stage"
+                        >
+                          <ArrowRight size={12} aria-hidden="true" />
+                          <span>Advance</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"

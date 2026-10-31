@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { AppError } from './errorHandler';
+import { UnauthorizedError } from './errorHandler';
 
 export interface AuthenticatedUser {
   id: string;
@@ -18,11 +18,15 @@ declare global {
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+/**
+ * Express middleware to authenticate incoming JWT bearer tokens.
+ * Attaches decoded user metadata to req.user.
+ */
+export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AppError('Authentication required. Missing or malformed token.', 401);
+    return next(new UnauthorizedError('Authentication required. Missing or malformed token.'));
   }
 
   const token = authHeader.split(' ')[1];
@@ -35,7 +39,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       name: decoded.name,
     };
     next();
-  } catch (error) {
-    throw new AppError('Invalid or expired authentication token.', 401);
+  } catch (_error) {
+    return next(new UnauthorizedError('Invalid or expired authentication token.'));
   }
 }
